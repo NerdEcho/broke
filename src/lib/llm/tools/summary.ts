@@ -18,6 +18,7 @@ const monthEnd = (d: string) => new Date(Date.UTC(Number(d.slice(0, 4)), Number(
 const SCRUBBED: Record<string, Kind> = {
   contribution_room: "Merchant", fund_fees: "Holding", safe_to_spend: "Subscription", idle_cash: "Merchant", match_check: "Merchant",
   card_recommendations: "Merchant", subscription_alerts: "Subscription", cancel_info: "Subscription", money_plan: "Merchant",
+  list_debts: "Account", debt_payoff: "Account", retirement_projection: "Account",
 };
 
 // The same tool names as the full set, returning summaries. What Claude Code, Codex and Gemini get, always.

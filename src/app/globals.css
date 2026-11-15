@@ -79,6 +79,8 @@ body {
 }
 
 @keyframes fade { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+/* The liquid in the retirement gauge: one wave length to the left, forever. Stops with reduced motion (above). */
+@keyframes wave { to { transform: translateX(-100px); } }
 @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
 
 @layer components {

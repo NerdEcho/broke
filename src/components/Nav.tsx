@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeftRight, ChartPie, ClipboardList, Ellipsis, House, Landmark, MessageCircle, Monitor, Moon, Sun } from "lucide-react";
+import { APART } from "@/lib/apart";
 import Link from "next/link";
 import type { ComponentType } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -20,14 +21,14 @@ const LINKS: { href: string; label: string; icon: Icon }[] = [
   { href: "/more", label: "More", icon: Ellipsis },
 ];
 const SPENDING = [{ href: "/spending", label: "Overview" }, { href: "/budgets", label: "Budgets" }, { href: "/recurring", label: "Recurring" }];
-const PLAN = [{ href: "/plan", label: "Money plan" }, { href: "/optimize", label: "Optimize" }, { href: "/bonuses", label: "Bonuses" }, { href: "/cards", label: "Cards" }];
+const PLAN = [{ href: "/plan", label: "Money plan" }, { href: "/optimize", label: "Optimize" }, { href: "/bonuses", label: "Bonuses" }, { href: "/cards", label: "Cards" }, { href: "/retirement", label: "Retirement" }, { href: "/watchlist", label: "Watchlist" }];
 const under = (path: string, href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(href + "/"));
 const tabsOf = (path: string) => [SPENDING, PLAN].find((g) => g.some((t) => under(path, t.href)));
-const sectionOf = (path: string) => (SPENDING.some((t) => under(path, t.href)) ? "/spending" : PLAN.some((t) => under(path, t.href)) ? "/plan" : LINKS.find((l) => under(path, l.href))?.href ?? (under(path, "/connect-ai") || under(path, "/debt") ? "/more" : undefined));
+const sectionOf = (path: string) => (SPENDING.some((t) => under(path, t.href)) ? "/spending" : PLAN.some((t) => under(path, t.href)) ? "/plan" : LINKS.find((l) => under(path, l.href))?.href ?? (under(path, "/connect-ai") || under(path, "/debt") || under(path, "/apart") ? "/more" : undefined));
 
 const TITLES: Record<string, string> = {
   "/": "Home", "/transactions": "Activity", "/spending": "Spending", "/budgets": "Budgets", "/recurring": "Recurring", "/plan": "Money plan",
-  "/optimize": "Optimize", "/bonuses": "Bonuses", "/cards": "Cards", "/accounts": "Accounts", "/accounts/add": "Add accounts", "/settings": "Settings", "/more": "More", "/debt": "Debt", "/connect-ai": "Connect your AI", "/go-live": "Use your real bank",
+  "/optimize": "Optimize", "/bonuses": "Bonuses", "/cards": "Cards", "/retirement": "Retirement", "/watchlist": "Watchlist", "/accounts": "Accounts", "/accounts/add": "Add accounts", "/settings": "Settings", "/more": "More", "/debt": "Debt", "/apart": APART?.name ?? "Kept apart", "/connect-ai": "Connect your AI", "/go-live": "Use your real bank",
 };
 
 export function Nav() {

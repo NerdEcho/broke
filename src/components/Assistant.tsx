@@ -545,6 +545,9 @@ const TOOL_LABEL: Record<string, string> = {
   cancel_info: "Finding how to cancel",
   card_recommendations: "Comparing credit cards",
   money_plan: "Reading your money plan",
+  list_debts: "Reading your debts",
+  debt_payoff: "Working out the payoff",
+  retirement_projection: "Projecting your retirement",
   web_search: "Searching the web",
   WebSearch: "Searching the web",
   WebFetch: "Reading a web page",
@@ -564,7 +567,7 @@ const Dots = () => (
 
 // Links in a reply: http(s) opens in a new tab, a path inside broke ("/recurring") is an in-app link. Anything else
 // (javascript:, mailto:, relative text) stays plain text.
-const APP_PATH = "(?:transactions|recurring|budgets|spending|plan|optimize|cards|accounts|settings|insights|setup)\\b[^\\s)<>,]*";
+const APP_PATH = "(?:transactions|recurring|budgets|spending|plan|optimize|cards|accounts|debt|retirement|watchlist|settings|insights|setup)\\b[^\\s)<>,]*";
 const INLINE = new RegExp(`(\\*\\*[^*]+\\*\\*)|\\[([^\\]\\n]+)\\]\\(([^)\\n]+)\\)|(https?:\\/\\/[^\\s<>()\\]]+)|((?<![\\w/.])\\/${APP_PATH})`, "g");
 const linkCls = "underline underline-offset-2 decoration-muted/60 hover:decoration-ink";
 function ReplyLink({ href, children }: { href: string; children: React.ReactNode }) {

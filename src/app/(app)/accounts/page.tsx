@@ -8,6 +8,7 @@ import { Merchant } from "@/components/Merchant";
 import { ownedCards } from "@/lib/cards";
 import { ConnectionActions, SyncButton } from "@/components/PlaidButtons";
 import { getUser } from "@/lib/data";
+import { shortBank } from "@/lib/bank-name";
 import { money, money0, plural } from "@/lib/format";
 
 type Holding = { id: string; name: string | null; ticker: string | null; type: string | null; quantity: number | null; value: number | null; cost_basis: number | null };
@@ -121,13 +122,19 @@ export default async function Accounts() {
                   })()}
                   <div className="flex-1 min-w-0">
                     <div className="truncate">{a.custom_name || a.name} <span className="text-muted">{a.mask ? `··${a.mask}` : ""}</span></div>
-                    <div className="text-xs text-muted">{a.item.institution_name}{a.subtype ? ` · ${subtypeLabel(a.subtype)}` : ""}</div>
+                    <div className="text-xs text-muted">{shortBank(a.item.institution_name, "")}{a.subtype ? ` · ${subtypeLabel(a.subtype)}` : ""}</div>
                   </div>
                   <span className="tabular font-medium">{money(a.current_balance, a.currency)}</span>
                   <AccountEdit id={a.id} name={a.custom_name || a.name} bankName={a.name} type={a.type} manual={a.item.id === "manual"} />
                   <AccountToggle id={a.id} included={a.included} name={a.custom_name || a.name} />
                 </div>
                 {!!a.holdings?.length && (
+                  // Folded by default: the account's balance is the glance, its holdings are one click away.
+                  <details className="group">
+                  <summary className="pl-6 @md:pl-[4.75rem] pr-6 pb-3 text-xs text-muted cursor-pointer select-none hover:text-ink">
+                    <span className="group-open:hidden">Show {plural(a.holdings.length, "holding")}</span>
+                    <span className="hidden group-open:inline">Hide {plural(a.holdings.length, "holding")}</span>
+                  </summary>
                   <ul className="pl-6 @md:pl-[4.75rem] pr-6 pb-3 space-y-2.5">
                     {[...a.holdings].sort((x, y) => Number(y.value ?? 0) - Number(x.value ?? 0)).map((h) => {
                       const cash = isCash(h);
@@ -149,6 +156,7 @@ export default async function Accounts() {
                       );
                     })}
                   </ul>
+                  </details>
                 )}
                 </div>
               ))}
@@ -166,7 +174,7 @@ export default async function Accounts() {
                 <Merchant name={item.institution_name ?? "Bank"} logo={item.institution_logo} color={item.institution_color} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    {item.institution_name ?? "Bank"}
+                    <span title={item.institution_name ?? undefined}>{shortBank(item.institution_name)}</span>
                     {item.status && item.status !== "ok" && <span className="text-xs font-medium text-bad border border-bad rounded-full px-2 py-0.5">Needs attention</span>}
                   </div>
                   <div className="text-xs text-muted">
@@ -175,7 +183,7 @@ export default async function Accounts() {
                       : `${holds(item.accounts) ? `${holds(item.accounts)} · ` : ""}${plural(item.accounts.length, "account")}${since.get(item.id) ? ` · history from ${new Date(`${since.get(item.id)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""} · synced ${item.last_synced_at ? ago(item.last_synced_at) : "never"}`}
                   </div>
                 </div>
-                <ConnectionActions itemId={item.id} broken={item.provider === "plaid" && !!item.status && item.status !== "ok"} name={item.institution_name ?? "this bank"} />
+                <ConnectionActions itemId={item.id} broken={item.provider === "plaid" && !!item.status && item.status !== "ok"} name={shortBank(item.institution_name, "this bank")} />
               </div>
             ))}
           </section>

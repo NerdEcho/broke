@@ -1,9 +1,11 @@
 import { ChevronRight, Sparkles } from "lucide-react";
 import { DonateLink } from "@/components/Donate";
 import Link from "next/link";
+import { APART } from "@/lib/apart";
 
 const PAGES = [
   { href: "/debt", label: "Debt", what: "What you owe, what you're paying and what it costs." },
+  ...(APART ? [{ href: APART.href, label: APART.name, what: `Accounts held for ${APART.name}, kept apart from your own money.` }] : []),
 ];
 
 // What isn't in the main menu: Debt, connecting your AI and supporting broke.

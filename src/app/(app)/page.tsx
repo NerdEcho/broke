@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { SubscriptionsCard } from "@/components/SubscriptionsCard";
 import Link from "next/link";
 import { Suspense } from "react";
 import { CategoryCheck, type Checks } from "@/components/CategoryCheck";
@@ -159,6 +160,8 @@ export default async function Dashboard() {
           ) : <p className="text-sm text-muted">Nothing due in the next 2 weeks.</p>}
         </section>
       </div>
+
+      <SubscriptionsCard supabase={supabase} uid={uid} />
 
       <section className="card overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-2">

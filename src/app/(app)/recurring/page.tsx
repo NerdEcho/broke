@@ -123,9 +123,9 @@ function Section({ title, rows, empty, ctx: { logos, txns, state, advice, money:
                 {advice.has(s.id) && <div className="mt-1"><BillAdvice item={advice.get(s.id)!} money={money0} /></div>}
               </div>
               <span className={`tabular font-medium ${s.is_income ? "text-good" : ""}`}>{money(s.average_amount)}</span>
-              <div className="flex gap-2 justify-end basis-full @xl:basis-auto">
+              <div className="flex gap-2 justify-end items-center basis-full @xl:basis-auto">
                 {!s.is_income && <CancelActions stream={s} kind={negotiable(s.merchant_name, categoryOf(s, txns))} state={state} />}
-                <RecurringToggle id={s.id} active={s.active} />
+                <RecurringToggle id={s.id} active={s.active} name={s.merchant_name} />
               </div>
             </div>
           ))
