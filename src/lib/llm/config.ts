@@ -17,10 +17,13 @@ export type CliState = {
   codex: { installed: boolean; loggedIn: boolean };
   gemini: { installed: boolean };
   opencode: { installed: boolean; models: string[] };
-  local: { reachable: boolean; models: string[] };
+  local: { reachable: boolean; models: string[]; context?: number | null }; // context: the smallest window among loaded Ollama models
 };
 
 export const localBase = (env: Env = process.env) => env.LOCAL_LLM_BASE_URL || "http://localhost:11434/v1";
+// broke's tool list and a few lookups need about this much room. Ollama's own default is far smaller, and a model
+// that can't see the whole tool list answers without looking anything up.
+export const MIN_LOCAL_CONTEXT = 16_000;
 
 // Pure: turn what's installed/signed in into readiness plus the exact next steps.
 export function configured(env: Env, s: CliState): ProviderInfo[] {
@@ -66,7 +69,9 @@ export function configured(env: Env, s: CliState): ProviderInfo[] {
     codex: !s.codex.installed ? { found: "Not on this computer", action: "Install" } : !s.codex.loggedIn ? { found: "Installed, not signed in", action: "Sign in" } : { found: "Installed and signed in" },
     gemini: s.gemini.installed ? { found: "Installed" } : { found: "Not on this computer", action: "Install" },
     opencode: !s.opencode.installed ? { found: "Not on this computer", action: "Install" } : !s.opencode.models.length ? { found: "Installed, no models yet", action: "Add a model" } : { found: `Installed, ${s.opencode.models.length} models` },
-    local: !s.local.reachable ? { found: "Ollama or LM Studio isn't running", action: "Set up" } : !localModel ? { found: "Running, no model downloaded", action: "Download a model" } : { found: `Running ${localModel}` },
+    local: !s.local.reachable ? { found: "Ollama or LM Studio isn't running", action: "Set up" } : !localModel ? { found: "Running, no model downloaded", action: "Download a model" }
+      : s.local.context && s.local.context < MIN_LOCAL_CONTEXT ? { found: `Running ${localModel}. Its context length is ${Math.round(s.local.context / 1024)}k, too small for broke's tools: in Ollama's settings set Context length to 32k` }
+      : { found: `Running ${localModel}` },
   };
   return list.map((p) => ({ ...p, ...status[p.id], models: modelsFor(p.id, p.id === "opencode" ? s.opencode.models : s.local.models) }));
 }
@@ -107,14 +112,28 @@ const run = (bin: string, args: string[], env = cleanEnv()) =>
     ),
   );
 
+// Ollama only: the context length of the models it has loaded right now (its /api/ps). Null when none is loaded,
+// on LM Studio, or on an Ollama too old to say.
+async function loadedContext(env: Env): Promise<number | null> {
+  try {
+    const res = await fetch(`${localBase(env).replace(/\/v1\/?$/, "")}/api/ps`, { signal: AbortSignal.timeout(1000) });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { models?: { context_length?: number }[] };
+    const sizes = (body.models ?? []).map((m) => m.context_length).filter((n): n is number => typeof n === "number" && n > 0);
+    return sizes.length ? Math.min(...sizes) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function probeLocal(env: Env = process.env) {
   try {
     const res = await fetch(`${localBase(env)}/models`, { signal: AbortSignal.timeout(1000) });
-    if (!res.ok) return { reachable: false, models: [] as string[] };
+    if (!res.ok) return { reachable: false, models: [] as string[], context: null as number | null };
     const body = (await res.json()) as { data?: { id: string }[] };
-    return { reachable: true, models: (body.data ?? []).map((m) => m.id) };
+    return { reachable: true, models: (body.data ?? []).map((m) => m.id), context: await loadedContext(env) };
   } catch {
-    return { reachable: false, models: [] as string[] };
+    return { reachable: false, models: [] as string[], context: null as number | null };
   }
 }
 

@@ -30,6 +30,7 @@ const SERVICES: { name: string; match: RegExp; group?: string; cancel: string | 
   { name: "Audible", match: /audible/, cancel: "https://www.audible.com/account/overview" },
 ];
 
+const NOT_A_SUBSCRIPTION = /\binterest\b|finance charge|\bfees?\b|late charge|overdraft|\bpayments?\b|autopay|\btransfers?\b|\btax(es)?\b|\birs\b|mortgage|\bloan\b/i;
 const PER_MONTH: Record<string, number> = { WEEKLY: 52 / 12, BIWEEKLY: 26 / 12, SEMI_MONTHLY: 2, MONTHLY: 1, ANNUALLY: 1 / 12 };
 const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
 const service = (merchant: string) => SERVICES.find((s) => s.match.test(norm(merchant)));
@@ -61,8 +62,10 @@ export function subscriptionAlerts(streams: Stream[], txns: Charge[]): Alert[] {
     if (h) alerts.push({ kind: "price_hike", merchant: s.merchant_name, ...h });
   }
   // Same group (two music apps) or same merchant twice (two Netflix plans).
+  // Bank events repeat every month but are nothing to cancel: interest, fees, card and loan payments, transfers, tax.
   const groups = new Map<string, Stream[]>();
   for (const s of live) {
+    if (NOT_A_SUBSCRIPTION.test(s.merchant_name)) continue;
     const key = service(s.merchant_name)?.group ?? `same:${norm(s.merchant_name)}`;
     groups.set(key, [...(groups.get(key) ?? []), s]);
   }
@@ -94,6 +97,8 @@ const NEGOTIABLE_CATEGORY: Record<string, Negotiable> = {
 export type Negotiable = "internet" | "phone" | "insurance";
 export function negotiable(merchant: string, plaidCategory?: string | null): Negotiable | null {
   const m = norm(merchant);
+  // A card or loan payment is never a bill to haggle over, whatever its name contains ("CAPITAL ONE MOBILE PMT" is not a phone bill).
+  if (/\bpmt\b|\bepay\b|\bpayments?\b|autopay|\binterest\b/.test(m)) return null;
   return NEGOTIABLE.find(([re]) => re.test(m))?.[1] ?? (plaidCategory ? NEGOTIABLE_CATEGORY[plaidCategory] ?? null : null);
 }
 export const categoryOf = (s: Stream, txns: Charge[]) => chargesFor(s, txns).at(-1)?.plaid_category ?? null;

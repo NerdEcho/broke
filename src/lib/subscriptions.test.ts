@@ -32,3 +32,21 @@ assert.equal(negotiable("Farmers Market"), null);
 assert.equal(negotiable("Acme Fiber", "RENT_AND_UTILITIES_INTERNET_AND_CABLE"), "internet");
 assert.match(negotiatePrompt(s("Verizon", 85), "phone", "Texas"), /\$85\.00 a month.*Texas/);
 console.log("subscriptions: ok");
+
+// Interest and other bank events repeat monthly but are never "a subscription to keep one of".
+{
+  const bank = subscriptionAlerts(
+    [
+      { merchant_name: "INTEREST CHARGED TO STANDARD PURCH", frequency: "MONTHLY", average_amount: 60 },
+      { merchant_name: "INTEREST CHARGED TO STANDARD PURCH", frequency: "MONTHLY", average_amount: 40 },
+      { merchant_name: "Loan payment", frequency: "MONTHLY", average_amount: 300 },
+      { merchant_name: "Loan payment", frequency: "MONTHLY", average_amount: 200 },
+    ],
+    [],
+  );
+  assert.deepEqual(bank.filter((x) => x.kind === "duplicate"), []);
+}
+
+// A card payment made from a phone is not a phone bill.
+assert.equal(negotiable("CAPITAL ONE MOBILE PMT WEB JANE Q SAMPLE 12ABCDEFG3HIJ4K"), null);
+assert.equal(negotiable("Verizon"), "phone");

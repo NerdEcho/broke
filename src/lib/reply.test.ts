@@ -21,3 +21,14 @@ assert.equal(replyBlocks("Hi\n```breakdown\n{\"rows\": [").body, "Hi\n");
 assert.equal(replyBlocks("Hi\n" + fence("actions", "[oops")).actions.length, 0);
 assert.equal(replyBlocks(fence("breakdown", '{"rows": []}')).breakdown, null);
 console.log("reply ok");
+
+// A block written as a plain label and JSON, with no fence, is still read as the block.
+{
+  const loose = replyBlocks('$1,088 extra monthly toward debt.\nActions:\n[{"label": "Check credit card rates", "href": "/accounts"}, {"label": "Track debt payoff", "href": "/plan"}]');
+  assert.deepEqual(loose.actions, [{ label: "Check credit card rates", href: "/accounts" }, { label: "Track debt payoff", href: "/plan" }]);
+  assert.equal(loose.body.trim(), "$1,088 extra monthly toward debt.");
+  const same = replyBlocks('Next: ["What about October?", "Show my bills"]');
+  assert.deepEqual(same.next, ["What about October?", "Show my bills"]);
+  // Not JSON: left as written.
+  assert.equal(replyBlocks("Actions: [call the bank]").body, "Actions: [call the bank]");
+}

@@ -8,17 +8,22 @@ export type CheckRow = {
   logo_url: string | null; currency: string | null; category_id: string | null; plaid_confidence: string | null; manual: boolean;
   category: { id: string; key: string; label: string; kind: "spend" | "income" | "transfer"; icon?: string; color?: string } | null;
 };
-export type Reason = "none" | "low" | "money-in" | "transfer" | "unknown";
+export type Reason = "none" | "big-in" | "low" | "money-in" | "transfer" | "unknown";
 
 // The one select both clients run: own, not hidden, not pending, never answered (migration 0023), last 90 days.
 export const CHECK_COLS = "id, date, amount, name, merchant_name, custom_name, logo_url, currency, category_id, plaid_confidence, manual, category:categories(id, key, label, kind, icon, color)";
 // ponytail: one fixed size for "large" in every currency; scale it by the user's typical month if it flags too much or too little.
 export const LARGE_TRANSFER = 500;
+// One deposit this big, counted as income, is more often money moved in (a rollover, a sale, a transfer between banks)
+// than pay. Left as income it bends every average on the Spending page, so it is asked about for a year, not 90 days.
+export const LARGE_INCOME = 10_000;
+export const LARGE_INCOME_DAYS = 400;
 const LOW = new Set(["LOW", "UNKNOWN"]);
 
 /** Why a row needs a check, most telling reason first, or null when it looks right. */
 export function unsureReason(t: CheckRow): Reason | null {
   if (!t.category || t.category.key === "OTHER") return "none";
+  if (t.amount <= -LARGE_INCOME && t.category.kind === "income") return "big-in";
   if (t.plaid_confidence && LOW.has(t.plaid_confidence)) return "low";
   if (t.amount < 0 && t.category.kind === "spend") return "money-in";
   if (t.category.kind === "transfer" && Math.abs(t.amount) >= LARGE_TRANSFER) return "transfer";
@@ -29,6 +34,7 @@ export function unsureReason(t: CheckRow): Reason | null {
 
 export const REASON_TEXT: Record<Reason, string> = {
   none: "No category yet",
+  "big-in": "A large deposit counted as income. If it was money moved between accounts, file it as a transfer",
   low: "The bank wasn't sure of this category",
   "money-in": "Money in, filed as spending",
   transfer: "A large transfer",
@@ -57,5 +63,9 @@ export async function fetchChecks(sb: SupabaseClient, uid: string, today = new D
   const { data, error } = await sb.from("transactions").select(CHECK_COLS).eq("user_id", uid).is("checked_at", null)
     .eq("ignored", false).eq("pending", false).gte("date", since).order("date", { ascending: false }).order("id").limit(1000);
   if (error) return { rows: [], total: 0 };
-  return toCheck((data ?? []) as unknown as CheckRow[], n);
+  // Large deposits are looked for further back: one of them can sit in the yearly totals long after the 90 days.
+  const far = new Date(Date.parse(today) - LARGE_INCOME_DAYS * 864e5).toISOString().slice(0, 10);
+  const { data: big } = await sb.from("transactions").select(CHECK_COLS).eq("user_id", uid).is("checked_at", null)
+    .eq("ignored", false).eq("pending", false).gte("date", far).lt("date", since).lte("amount", -LARGE_INCOME).order("amount").limit(20);
+  return toCheck([...(data ?? []), ...(big ?? [])] as unknown as CheckRow[], n);
 }

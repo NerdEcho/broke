@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ClearMyData, ClearTestData, RemoveTest } from "@/components/ClearTestData";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { modelOptions, saveChoice } from "@/components/Assistant";
+import { modelOptions, saveChoice, shownChoice } from "@/components/Assistant";
 import { CountryField } from "@/components/CountryPicker";
 import { Dropdown } from "@/components/Dropdown";
 import { Modal } from "@/components/Modal";
@@ -13,7 +13,7 @@ import { ThemeToggle } from "@/components/Nav";
 import { SignOut } from "@/components/SignOut";
 import { countryOf } from "@/lib/countries";
 import { bandLabel, creditOf, monthText } from "@/lib/credit";
-import { decode, encode, isSmall, QUALITY_NOTE, type ModelChoice } from "@/lib/llm/models";
+import { decode, isSmall, QUALITY_NOTE, type ModelChoice } from "@/lib/llm/models";
 import { AI_MODES, type AiMode } from "@/lib/privacy";
 import type { Section, SetupStatus } from "@/lib/setup";
 import { createClient, updateMeta } from "@/utils/supabase/client";
@@ -260,7 +260,7 @@ function ModelCard() {
         <div className="h-10 max-w-sm rounded-xl bg-canvas animate-pulse" aria-busy="true" />
       ) : (
         <div className="max-w-sm">
-          <Dropdown label="Model" value={encode(choice)} onChange={pick} options={modelOptions(data.providers)} />
+          <Dropdown label="Model" value={shownChoice(choice, data.providers)} onChange={pick} options={modelOptions(data.providers)} />
           <Link href="/connect-ai" className="text-sm underline underline-offset-4">Connect your AI</Link>
         </div>
       )}

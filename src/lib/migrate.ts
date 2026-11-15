@@ -19,9 +19,14 @@ const dir = () => join(process.cwd(), "supabase", "migrations");
 export const migrationFiles = async () => (await readdir(dir())).filter((f) => f.endsWith(".sql")).sort();
 
 // Connection errors in plain words; the raw message (never containing the password) goes to the server log only.
+const logged = new Set<string>(); // each database problem is written to the terminal once, not on every page load
 function explain(e: unknown) {
   const msg = e instanceof Error ? e.message : String(e);
-  console.error("[broke] database:", msg);
+  if (!logged.has(msg)) {
+    logged.add(msg);
+    console.error("[broke] database:", msg);
+    if (/password authentication failed/i.test(msg)) console.error("[broke] Fix it in Settings, Database: paste the Session pooler string and your current database password, then Save. broke keeps working meanwhile; only table updates wait.");
+  }
   if (/password authentication failed/i.test(msg)) return "The database password in SUPABASE_DB_URL is wrong.";
   if (/invalid_token|unauthorized|\b401\b/i.test(msg)) return "The Supabase sign-in expired. Press Connect Supabase again.";
   if (/ENOTFOUND|getaddrinfo|ECONNREFUSED|timeout/i.test(msg)) return "Couldn't reach the database. Check SUPABASE_DB_URL is the Session pooler address.";

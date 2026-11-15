@@ -14,7 +14,17 @@ export function replyBlocks(text: string) {
   let breakdown: Breakdown | null = null;
   let actions: Action[] = [];
   let next: string[] = [];
-  const body = text
+  // Smaller models sometimes write a block as a plain label and its JSON ("Actions:" then a list) with no fence.
+  // When that JSON parses, treat it as the block it was meant to be, so it is drawn as buttons, never shown as code.
+  const fenced = text.replace(/^[ \t]*\**(actions|next|breakdown)\**[ \t]*:[ \t]*\**[ \t]*\n?[ \t]*(\[.*\]|\{.*\})[ \t]*$/gim, (whole, kind: string, json: string) => {
+    try {
+      JSON.parse(json);
+      return "```" + kind.toLowerCase() + "\n" + json + "\n```";
+    } catch {
+      return whole;
+    }
+  });
+  const body = fenced
     .replace(new RegExp(`\`\`\`(${KINDS})\\s*\\n([\\s\\S]*?)\`\`\``, "g"), (_, kind: string, json: string) => {
       try {
         const v = JSON.parse(json);

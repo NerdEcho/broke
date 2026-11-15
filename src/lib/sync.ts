@@ -192,30 +192,48 @@ async function syncHoldings(item: PlaidItem, accountId: Map<string, string>) {
     return;
   }
   const security = new Map(data.securities.map((s) => [s.security_id, s]));
-  const rows = data.holdings
-    .filter((h) => accountId.has(h.account_id))
-    .map((h) => {
-      const s = security.get(h.security_id);
-      return {
-        user_id: item.user_id,
-        account_id: accountId.get(h.account_id)!,
-        security_id: h.security_id,
-        name: s?.name ?? null,
-        ticker: s?.ticker_symbol ?? null,
-        type: s?.type ?? null,
-        quantity: h.quantity,
-        price: h.institution_price,
-        value: h.institution_value,
-        cost_basis: h.cost_basis,
-        updated_at: new Date().toISOString(),
-      };
+  const stamp = new Date().toISOString();
+  // One row per account and security: a bank can report the same security in several lots, and the table allows one.
+  const merged = new Map<string, { user_id: string; account_id: string; security_id: string; name: string | null; ticker: string | null; type: string | null; quantity: number; price: number; value: number; cost_basis: number | null; updated_at: string }>();
+  for (const h of data.holdings) {
+    const account = accountId.get(h.account_id);
+    if (!account) continue;
+    const s = security.get(h.security_id);
+    const key = `${account}|${h.security_id}`;
+    const seen = merged.get(key);
+    if (seen) {
+      seen.quantity += h.quantity;
+      seen.value += h.institution_value;
+      seen.cost_basis = seen.cost_basis == null && h.cost_basis == null ? null : (seen.cost_basis ?? 0) + (h.cost_basis ?? 0);
+      continue;
+    }
+    merged.set(key, {
+      user_id: item.user_id,
+      account_id: account,
+      security_id: h.security_id,
+      name: s?.name ?? null,
+      ticker: s?.ticker_symbol ?? null,
+      type: s?.type ?? null,
+      quantity: h.quantity,
+      price: h.institution_price,
+      value: h.institution_value,
+      cost_basis: h.cost_basis ?? null,
+      updated_at: stamp,
     });
-  // Replace, so sold positions disappear.
-  await db.from("holdings").delete().in("account_id", [...accountId.values()]);
-  if (rows.length) {
-    const { error } = await db.from("holdings").insert(rows);
-    if (error) console.error("[broke] holdings:", error.message); // table missing before migration 0006: balances still show.
   }
+  const rows = [...merged.values()];
+  const accounts = [...accountId.values()];
+  if (!accounts.length) return;
+  // Write over what is there, then drop what this sync did not see (sold positions). Two syncs at once (two tabs, two
+  // computers) no longer collide, and a failed write leaves the earlier holdings in place instead of an empty list.
+  if (rows.length) {
+    const { error } = await db.from("holdings").upsert(rows, { onConflict: "account_id,security_id" });
+    if (error) {
+      console.error("[broke] holdings:", error.message); // table missing before migration 0006: balances still show.
+      return;
+    }
+  }
+  await db.from("holdings").delete().in("account_id", accounts).lt("updated_at", stamp);
 }
 
 // Since Jan 1 last year: covers this tax year and last year's IRA/HSA window to April 15.

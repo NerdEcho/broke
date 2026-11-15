@@ -27,3 +27,7 @@ const g = toCheck([row({ id: "s1", amount: -810 }), row({ id: "s2", amount: -810
 assert.deepEqual(g.rows.map((r) => r.same), [["s1", "s2"], ["x"]], "same name and reason is one question");
 assert.equal(g.total, 2, "total counts questions, not transactions");
 console.log("unsure ok");
+
+// A very large deposit filed as income is asked about; an ordinary paycheck is not.
+assert.equal(unsureReason(row({ amount: -386000, merchant_name: "Deposit", category: { id: "i", key: "INCOME", label: "Income", kind: "income" } })), "big-in");
+assert.equal(unsureReason(row({ amount: -3900, merchant_name: "Employer", category: { id: "i", key: "INCOME", label: "Income", kind: "income" } })), null);

@@ -57,6 +57,16 @@ export function modelOptions(providers: Provider[]) {
         ],
   );
 }
+/** The dropdown value for a saved choice. A local choice saved without a model ("Use this" on Connect your AI) has no
+ * row of its own, so it shows as the local model that is running instead of falling back to the first row. */
+export function shownChoice(choice: ModelChoice | null | undefined, providers: Provider[]) {
+  const c = choice ?? { provider: "openrouter" as const, model: null };
+  if (c.provider === "local" && !c.model) {
+    const running = providers.find((p) => p.id === "local")?.model;
+    if (running) return encode({ provider: "local", model: running });
+  }
+  return encode(c);
+}
 /** Saves the choice for chat, check-ins and the money plan (user_metadata.ai_model). */
 export const saveChoice = (c: ModelChoice) => updateMeta(createClient(), { data: { ai_model: c } });
 
@@ -270,7 +280,7 @@ function Panel(props: {
           <div className="min-w-0 flex-1 flex">
             <Dropdown
               label="AI model"
-              value={encode(choice ?? { provider: "openrouter", model: null })}
+              value={shownChoice(choice, providers)}
               onChange={pickModel}
               options={modelOptions(providers.length ? providers : [{ id: "openrouter", label: "OpenRouter", model: null, ready: true }])}
             />
